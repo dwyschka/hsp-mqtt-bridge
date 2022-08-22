@@ -1,12 +1,15 @@
 version: '3.3'
 services:
   stove-bridge:
-    image: registry.sensou.de:443/d.wyschka/stove-bridge:latest
+    image: registry.git.sensou.de/d.wyschka/hsp-mqttbridge:latest
+    depends_on:
+      - stove-builder
     build:
       context: .
       dockerfile: Dockerfile
     container_name: stove-bridge
     restart: always
+
     environment:
       HSP_STOVE_IP: "10.10.48.134"
       HSP_STOVE_PIN: 2749
