@@ -27,5 +27,6 @@ before_script:
 build:
   stage: build
   script:
+    - docker login --username d.wyschka --password n71s5cBBqg2wsbZUACJq
     - docker compose build
     - docker compose push
