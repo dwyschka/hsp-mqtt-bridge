@@ -28,6 +28,12 @@ func initMqtt() mqtt.Client {
 	options.SetClientID(clientId)
 	options.OnConnect = connectHandler
 	options.OnConnectionLost = connectLostHandler
+
+	useAuth, _ := strconv.ParseBool(os.Getenv("MQTT_USE_AUTH"))
+	if useAuth {
+		options.Username = os.Getenv("MQTT_USER")
+		options.Password = os.Getenv("MQTT_PASSWORD")
+	}
 	client := mqtt.NewClient(options)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Printf("Got Error: %v\r\n", token.Error())
