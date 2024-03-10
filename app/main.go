@@ -173,7 +173,7 @@ func autodiscovery() {
 		TempStateTemplate:        "{{ value_json['sp_temp'] }}",
 		CurrentTempStateTopic:    fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
 		CurrentTempStateTemplate: "{{ value_json['is_temp'] }}",
-		MinTemp:                  "20",
+		MinTemp:                  "10",
 		MaxTemp:                  "30",
 		TempStep:                 "1",
 		ModeStateTopic:           fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
