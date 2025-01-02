@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -17,7 +17,7 @@ func callStove() HspStove {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -32,8 +32,8 @@ func calculatePin(nonce string, pin string) [16]byte {
 	return md5.Sum([]byte(nonce + hex.EncodeToString(bPin[:])))
 }
 
-func command(targetTemp *int, start *bool, weekProgramStart *bool) {
-	command := HspCommand{targetTemp, start, weekProgramStart}
+func command(targetTemp *int, tvlTemperature *int, heatCurve *float, start *bool, weekProgramStart *bool, roomMode *bool, ecoMode *bool) {
+	command := HspCommand{targetTemp, tvlTemperature, heatCurve, start, weekProgramStart, roomMode, ecoMode}
 	commandJson, _ := json.Marshal(command)
 	stove := callStove()
 	calculatedPin := calculatePin(stove.Meta.Nonce, os.Getenv("HSP_STOVE_PIN"))
@@ -51,7 +51,7 @@ func command(targetTemp *int, start *bool, weekProgramStart *bool) {
 	req.Header = headers
 	response, _ := client.Do(req)
 	defer response.Body.Close()
-	_, err := ioutil.ReadAll(response.Body)
+	_, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}

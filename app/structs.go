@@ -37,6 +37,8 @@ type HspStove struct {
 	WeekProgram        []HspWeekProgram `json:"weekprogram"`
 	Error              []HspStoveError  `json:"error"`
 	EcoMode            bool             `json:"eco_mode"`
+	RoomMode           bool             `json:"room_mode"`
+	TvlTemperature     int              `json:"tvl_temp"`
 	Pgi                bool             `json:"pgi"`
 	Ignitions          int              `json:"ignitions"`
 	OnTime             int              `json:"on_time"`
@@ -47,8 +49,12 @@ type HspStove struct {
 
 type HspCommand struct {
 	TargetTemperature *int  `json:"sp_temp,omitempty"`
+	TvlTemperature    *int  `json:"tvl_temp,omitempty"`
+	HeatingCurve      *int  `json:"ht_char,omitempty"`
 	Start             *bool `json:"prg,omitempty"`
 	StartWeekProgram  *bool `json:"wprg,omitempty"`
+	RoomMode          *bool `json:"room_mode,omitempty"`
+	EcoMode           *bool `json:"eco_mode,omitempty"`
 }
 
 type HspSensorDiscovery struct {
@@ -79,6 +85,15 @@ type HspSwitchDiscovery struct {
 	StateOn       bool      `json:"pl_on"`
 	ValueTemplate string    `json:"val_tpl"`
 	ForceUpdate   bool      `json:"frc_upd"`
+}
+type HspInputNumberDiscovery struct {
+	Device        HspDevice `json:"device"`
+	Name          string    `json:"name"`
+	UniqueId      string    `json:"uniq_id"`
+	CommandTopic  string    `json:"cmd_t"`
+	NumberMin     float	`json:"n_min"`
+	NumberMax     float	`json:"n_max"`
+	ValueTemplate string    `json:"val_tpl"`
 }
 type HspDevice struct {
 	Ids             []string `json:"ids"`
@@ -118,4 +133,8 @@ func BoolPointer(b bool) *bool {
 func IntPointer(number int) *int {
 	intVar := number
 	return &intVar
+}
+func FloatPointer(number float) *float {
+	floatVar := number
+	return &floatVar
 }

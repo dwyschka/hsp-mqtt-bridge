@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/jasonlvhit/gocron"
 	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/jasonlvhit/gocron"
 )
 
 var mqttClient mqtt.Client
@@ -65,6 +66,30 @@ func autodiscovery() {
 	jsonValue, _ = json.Marshal(currentTemp)
 	mqttClient.Publish(fmt.Sprintf("homeassistant/sensor/hsp_%s_current_temp/config", stove.Meta.SerialNumber), 1, true, jsonValue)
 
+	var tvlTemp = HspSensorDiscovery{
+		Name:              fmt.Sprintf("HSP %s Forward Flow Temperature", stove.Meta.SerialNumber),
+		UniqueId:          fmt.Sprintf("hsp-%s-tvl_temp", stove.Meta.SerialNumber),
+		UnitOfMeasurement: "°C",
+		DeviceClass:       "temperature",
+		ForceUpdate:       true,
+		StateTopic:        fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
+		ValueTemplate:     "{{ value_json['tvl_temp'] }}",
+		Device:            hspDevice,
+	}
+	jsonValue, _ = json.Marshal(tvlTemp)
+	mqttClient.Publish(fmt.Sprintf("homeassistant/sensor/hsp_%s_forward_flow_temp/config", stove.Meta.SerialNumber), 1, true, jsonValue)
+
+	var heatCurve = HspSensorDiscovery{
+		Name:          fmt.Sprintf("HSP %s Heating Curve", stove.Meta.SerialNumber),
+		UniqueId:      fmt.Sprintf("hsp-%s-ht_char", stove.Meta.SerialNumber),
+		ForceUpdate:   true,
+		StateTopic:    fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
+		ValueTemplate: "{{ value_json['ht_char'] }}",
+		Device:        hspDevice,
+	}
+	jsonValue, _ = json.Marshal(heatCurve)
+	mqttClient.Publish(fmt.Sprintf("homeassistant/sensor/hsp_%s_heating_curve/config", stove.Meta.SerialNumber), 1, true, jsonValue)
+
 	var ignitions = HspSensorDiscovery{
 		Name:          fmt.Sprintf("HSP %s Ignitions", stove.Meta.SerialNumber),
 		UniqueId:      fmt.Sprintf("hsp-%s-ignitions", stove.Meta.SerialNumber),
@@ -75,7 +100,7 @@ func autodiscovery() {
 	}
 	jsonValue, _ = json.Marshal(ignitions)
 	mqttClient.Publish(fmt.Sprintf("homeassistant/sensor/hsp_%s_ignitions/config", stove.Meta.SerialNumber), 1, true, jsonValue)
-
+	
 	var cleaningIn = HspSensorDiscovery{
 		Name:              fmt.Sprintf("HSP %s Cleaning In", stove.Meta.SerialNumber),
 		UniqueId:          fmt.Sprintf("hsp-%s-cleaning_in", stove.Meta.SerialNumber),
@@ -163,6 +188,48 @@ func autodiscovery() {
 	jsonValue, _ = json.Marshal(weekProgramSwitch)
 	mqttClient.Publish(fmt.Sprintf("homeassistant/switch/hsp_%s_weekprogram/config", stove.Meta.SerialNumber), 1, true, jsonValue)
 
+	var roomModeSwitch = HspSwitchDiscovery{
+		Name:          fmt.Sprintf("HSP %s Room Mode", stove.Meta.SerialNumber),
+		UniqueId:      fmt.Sprintf("hsp-%s-room_mode", stove.Meta.SerialNumber),
+		ForceUpdate:   true,
+		StateTopic:    fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
+		ValueTemplate: "{{ value_json['room_mode'] }}",
+		Device:        hspDevice,
+		CommandTopic:  fmt.Sprintf("hsp-%s/command/roomMode", stove.Meta.SerialNumber),
+		StateOff:      false,
+		StateOn:       true,
+	}
+	jsonValue, _ = json.Marshal(roomModeSwitch)
+	mqttClient.Publish(fmt.Sprintf("homeassistant/switch/hsp_%s_room_mode/config", stove.Meta.SerialNumber), 1, true, jsonValue)
+
+	var ecoModeSwitch = HspSwitchDiscovery{
+		Name:          fmt.Sprintf("HSP %s Eco Mode", stove.Meta.SerialNumber),
+		UniqueId:      fmt.Sprintf("hsp-%s-eco_mode", stove.Meta.SerialNumber),
+		ForceUpdate:   true,
+		StateTopic:    fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
+		ValueTemplate: "{{ value_json['eco_mode'] }}",
+		Device:        hspDevice,
+		CommandTopic:  fmt.Sprintf("hsp-%s/command/ecoMode", stove.Meta.SerialNumber),
+		StateOff:      false,
+		StateOn:       true,
+	}
+	jsonValue, _ = json.Marshal(ecoModeSwitch)
+	mqttClient.Publish(fmt.Sprintf("homeassistant/switch/hsp_%s_eco_mode/config", stove.Meta.SerialNumber), 1, true, jsonValue)
+
+	var heatCurveInputNumber = HspInputNumberDiscovery{
+		Name:          fmt.Sprintf("HSP %s Heating Curve", stove.Meta.SerialNumber),
+		UniqueId:      fmt.Sprintf("hsp-%s-heating_curve", stove.Meta.SerialNumber),
+		ForceUpdate:   true,
+		StateTopic:    fmt.Sprintf("hsp-%s/result", stove.Meta.SerialNumber),
+		ValueTemplate: "{{ value_json['ht_char'] }}",
+		Device:        hspDevice,
+		CommandTopic:  fmt.Sprintf("hsp-%s/command/heatingCurve", stove.Meta.SerialNumber),
+		NumberMin:     1,
+		NumberMax:     4,
+	}
+	jsonValue, _ = json.Marshal(heatCurveInputNumber)
+	mqttClient.Publish(fmt.Sprintf("homeassistant/input_number/hsp_%s_heating_curve/config", stove.Meta.SerialNumber), 1, true, jsonValue)
+
 	var hspClimate = HspClimateDiscovery{
 		Device:                   hspDevice,
 		Name:                     fmt.Sprintf("HSP %s Temperature", stove.Meta.SerialNumber),
@@ -211,23 +278,45 @@ func subscribeMqtt() {
 	topics := make(map[string]byte)
 	topics[fmt.Sprintf("hsp-%s/command/power", stove.Meta.SerialNumber)] = 1
 	topics[fmt.Sprintf("hsp-%s/command/weekProgram", stove.Meta.SerialNumber)] = 1
+	topics[fmt.Sprintf("hsp-%s/command/roomMode", stove.Meta.SerialNumber)] = 1
+	topics[fmt.Sprintf("hsp-%s/command/ecoMode", stove.Meta.SerialNumber)] = 1
 	topics[fmt.Sprintf("hsp-%s/command/target_temperature", stove.Meta.SerialNumber)] = 1
+	topics[fmt.Sprintf("hsp-%s/command/forward_flow_temperature", stove.Meta.SerialNumber)] = 1
+	topics[fmt.Sprintf("hsp-%s/command/heating_curve", stove.Meta.SerialNumber)] = 1
 	topics[fmt.Sprintf("hsp-%s/command/clean_error", stove.Meta.SerialNumber)] = 1
 
 	token := mqttClient.SubscribeMultiple(topics, func(client mqtt.Client, message mqtt.Message) {
 		log.Printf("Topic %s was published, Value: %s \r\n", message.Topic(), string(message.Payload()))
 		if message.Topic() == fmt.Sprintf("hsp-%s/command/power", stove.Meta.SerialNumber) {
 			payload, _ := strconv.ParseBool(string(message.Payload()))
-			command(nil, BoolPointer(payload), nil)
+			command(nil, nil, nil, BoolPointer(payload), nil, nil, nil)
 		}
 		if message.Topic() == fmt.Sprintf("hsp-%s/command/weekProgram", stove.Meta.SerialNumber) {
 			payload, _ := strconv.ParseBool(string(message.Payload()))
-			command(nil, nil, BoolPointer(payload))
+			command(nil, nil, nil, nil, BoolPointer(payload), nil, nil)
+		}
+		if message.Topic() == fmt.Sprintf("hsp-%s/command/roomMode", stove.Meta.SerialNumber) {
+			payload, _ := strconv.ParseBool(string(message.Payload()))
+			command(nil, nil, nil, nil, nil, BoolPointer(payload), nil)
+		}
+		if message.Topic() == fmt.Sprintf("hsp-%s/command/ecoMode", stove.Meta.SerialNumber) {
+			payload, _ := strconv.ParseBool(string(message.Payload()))
+			command(nil, nil, nil, nil, nil, nil, BoolPointer(payload))
 		}
 		if message.Topic() == fmt.Sprintf("hsp-%s/command/target_temperature", stove.Meta.SerialNumber) {
 			payload, _ := strconv.ParseFloat(string(message.Payload()), 0)
 			var p int = int(payload)
-			command(IntPointer(p), nil, nil)
+			command(IntPointer(p), nil, nil, nil, nil, nil, nil)
+		}
+		if message.Topic() == fmt.Sprintf("hsp-%s/command/forward_flow_temperature", stove.Meta.SerialNumber) {
+			payload, _ := strconv.ParseFloat(string(message.Payload()), 0)
+			var p int = int(payload)
+			command(nil, IntPointer(p), nil, nil, nil, nil, nil)
+		}
+		if message.Topic() == fmt.Sprintf("hsp-%s/command/heating_curve", stove.Meta.SerialNumber) {
+			payload, _ := strconv.ParseFloat(string(message.Payload()), 0)
+			var p float = float(payload)
+			command(nil, nil, FloatPointer(p), nil, nil, nil, nil)
 		}
 		if message.Topic() == fmt.Sprintf("hsp-%s/command/clean_error", stove.Meta.SerialNumber) {
 			currentError := callStove()
